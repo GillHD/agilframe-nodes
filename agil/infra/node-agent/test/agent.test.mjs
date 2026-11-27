@@ -340,7 +340,7 @@ test('long-running: follows Core interval, respects Retry-After and retries the 
   });
   const fakeDocker = await startFakeDocker();
   const stateDir = mkdtempSync(path.join(tmpdir(), 'agil-node-agent-cmd-'));
-  writeFileSync(path.join(stateDir, 'module-env.json'), JSON.stringify(STT_TEST_ENV));
+  writeFileSync(path.join(stateDir, 'module-env.json'), JSON.stringify(STT_TEST_ENV), { mode: 0o600 });
   // The host can reserve the agent's default port, even when nothing is listening on it.
   const healthPortProbe = createServer();
   await new Promise((resolve) => healthPortProbe.listen(0, '127.0.0.1', resolve));
@@ -371,7 +371,7 @@ test('long-running: follows Core interval, respects Retry-After and retries the 
     assert.deepEqual(resultBeat.body.moduleResults, rejected.body.moduleResults, 'the rejected beat did not drop its result');
     const [ack] = resultBeat.body.moduleResults;
     assert.match(ack.commandId, /^nmc_[0-9a-f]{16}$/);
-    assert.equal(ack.ok, true);
+    assert.equal(ack.ok, true, ack.error);
     assert.equal(ack.status, 'running');
     assert.ok(!('error' in ack), 'a successful result carries no error text');
 
