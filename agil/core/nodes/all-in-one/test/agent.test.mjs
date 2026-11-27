@@ -436,7 +436,6 @@ test('image media process selection matches node features', {
 test('external LiveKit controls heartbeat readiness without a bundled process', async () => {
   const { main } = await import('../agent/index.mjs');
   const nodeId = 'qa-external-sfu';
-  const port = await freePort();
   const fake = await startFakeCore({ nodeId, heartbeatIntervalSec: 5 });
   const stateDir = await mkdtemp(path.join(tmpdir(), 'agil-node-external-'));
   const probes = [];
@@ -453,6 +452,7 @@ test('external LiveKit controls heartbeat readiness without a bundled process', 
   livekit.listen(0, '127.0.0.1');
   await once(livekit, 'listening');
   const externalOrigin = `http://127.0.0.1:${livekit.address().port}`;
+  const port = await freePort();
   const base = `http://127.0.0.1:${port}`;
   let handle;
   const latest = () => fake.requests.filter(({ url }) => url.endsWith('/heartbeat')).at(-1)?.body;
