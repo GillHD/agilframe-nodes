@@ -1,0 +1,48 @@
+# Optional Egress worker. Use with docker-compose.yml and compose.local-redis.yml.
+x-livekit-auth: &livekit-auth
+  LIVEKIT_API_KEY: "${LIVEKIT_API_KEY:?set LIVEKIT_API_KEY}"
+  LIVEKIT_API_SECRET: "${LIVEKIT_API_SECRET:?set LIVEKIT_API_SECRET}"
+
+services:
+  node:
+    environment:
+      <<: *livekit-auth
+      SFU_PORT: "${SFU_PORT:-7880}"
+
+  egress:
+    labels:
+      agil.module: egress
+      agil.node: "${NODE_ID:-}"
+    image: livekit/egress:v1.15.0${AGIL_EGRESS_IMAGE_DIGEST:+@sha256:$AGIL_EGRESS_IMAGE_DIGEST}
+    restart: unless-stopped
+    network_mode: host
+    shm_size: "1gb"
+    depends_on:
+      node:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    stop_grace_period: 180s
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - seccomp=unconfined
+    environment:
+      <<: *livekit-auth
+      EGRESS_CONFIG_BODY: |
+        ws_url: ws://127.0.0.1:${SFU_PORT:-7880}
+        redis:
+          address: 127.0.0.1:${AGIL_NODE_REDIS_PORT:-6380}
+        health_port: ${AGIL_NODE_EGRESS_HEALTH_PORT:-8082}
+        enable_chrome_sandbox: false
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:${AGIL_NODE_EGRESS_HEALTH_PORT:-8082}/"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"

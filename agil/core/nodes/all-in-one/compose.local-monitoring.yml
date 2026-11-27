@@ -1,0 +1,22 @@
+# Optional Linux host exporter. Collect locally or set a private monitoring address.
+services:
+  node-exporter:
+    image: prom/node-exporter:v1.8.2${AGIL_NODE_EXPORTER_IMAGE_DIGEST:+@sha256:$AGIL_NODE_EXPORTER_IMAGE_DIGEST}
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    command:
+      - --path.rootfs=/host
+      - --web.listen-address=${AGIL_NODE_EXPORTER_LISTEN:-127.0.0.1:9100}
+    volumes:
+      - /:/host:ro
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

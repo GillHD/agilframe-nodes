@@ -1,0 +1,38 @@
+# Optional local Redis for a host running LiveKit. Combine with docker-compose.yml.
+services:
+  node:
+    environment:
+      SFU_REDIS_URL: "127.0.0.1:${AGIL_NODE_REDIS_PORT:-6380}"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine${AGIL_REDIS_IMAGE_DIGEST:+@sha256:$AGIL_REDIS_IMAGE_DIGEST}
+    restart: unless-stopped
+    network_mode: host
+    command:
+      - redis-server
+      - --bind
+      - 127.0.0.1
+      - --port
+      - "${AGIL_NODE_REDIS_PORT:-6380}"
+      - --protected-mode
+      - "yes"
+      - --appendonly
+      - "yes"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -h 127.0.0.1 -p ${AGIL_NODE_REDIS_PORT:-6380} ping | grep -qx PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+volumes:
+  redis-data:

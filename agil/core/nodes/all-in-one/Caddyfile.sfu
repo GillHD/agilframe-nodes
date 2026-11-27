@@ -1,0 +1,19 @@
+{
+	admin unix//run/caddy/admin.sock
+	auto_https off
+}
+
+https://{$AGIL_SFU_TLS_HOST}:{$AGIL_SFU_TLS_PORT} {
+	bind {$AGIL_SFU_TLS_BIND}
+	tls /certs/fullchain.pem /certs/privkey.pem
+
+	@signaling path / /rtc /rtc/*
+	handle @signaling {
+		reverse_proxy 127.0.0.1:{$SFU_PORT} {
+			stream_close_delay 5m
+		}
+	}
+	handle {
+		respond 404
+	}
+}

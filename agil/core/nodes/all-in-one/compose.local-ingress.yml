@@ -1,0 +1,45 @@
+# Optional local RTMP Ingress. Use with docker-compose.yml and compose.local-redis.yml.
+x-livekit-auth: &livekit-auth
+  LIVEKIT_API_KEY: "${LIVEKIT_API_KEY:?set LIVEKIT_API_KEY}"
+  LIVEKIT_API_SECRET: "${LIVEKIT_API_SECRET:?set LIVEKIT_API_SECRET}"
+
+services:
+  node:
+    environment:
+      <<: *livekit-auth
+      SFU_PORT: "${SFU_PORT:-7880}"
+      SFU_RTMP_INGRESS_BASE_URL: "${SFU_RTMP_INGRESS_BASE_URL:-rtmp://127.0.0.1:${AGIL_NODE_INGRESS_RTMP_PORT:-1935}/live}"
+
+  ingress:
+    image: livekit/ingress:v1.6.0${AGIL_INGRESS_IMAGE_DIGEST:+@sha256:$AGIL_INGRESS_IMAGE_DIGEST}
+    labels:
+      agil.module: ingress
+      agil.node: "${NODE_ID:-}"
+      agil.module.lifecycle: "${AGIL_NODE_INGRESS_LIFECYCLE:-false}"
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      node:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      <<: *livekit-auth
+      INGRESS_CONFIG_BODY: |
+        ws_url: ws://127.0.0.1:${SFU_PORT:-7880}
+        redis:
+          address: 127.0.0.1:${AGIL_NODE_REDIS_PORT:-6380}
+        health_port: ${AGIL_NODE_INGRESS_HEALTH_PORT:-8083}
+        rtmp_port: ${AGIL_NODE_INGRESS_RTMP_PORT:-1935}
+        whip_port: -1
+        http_relay_port: ${AGIL_NODE_INGRESS_RELAY_PORT:-9090}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:${AGIL_NODE_INGRESS_HEALTH_PORT:-8083}/"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"

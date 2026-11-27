@@ -1,0 +1,97 @@
+# AgilFrame — all-in-one media node (LiveKit SFU + coturn TURN/STUN + agent).
+#
+# One container owns enrollment, heartbeats, health/metrics, drain and the two
+# media processes. It is a NODE, not the app: run the Core elsewhere (or on
+# 127.0.0.1 with an SSH tunnel) and enroll this host with a one-time token.
+#
+#   cp .env.example .env
+#   chmod 600 .env
+#   $EDITOR .env                 # token, LiveKit key/secret, TURN password, public IP
+#   docker compose up -d --build
+#   docker compose ps            # healthy only after the first accepted heartbeat
+#   docker compose logs -f node
+#
+# Requires Docker Engine 24+ / Compose v2.24+ (long-form `env_file.required`).
+#
+# Network model: host networking is REQUIRED. LiveKit must advertise the host's
+# public IP/ports for ICE and coturn must relay from the host's address; Docker
+# NAT would put a second, unreachable address in the candidate list. Docker
+# Desktop on Windows/macOS does not provide a real host network — use a Linux
+# host/VM for anything beyond a control-plane smoke test.
+#
+# Firewall (open only these; do not expose 8080/6789 to the internet):
+#   7880/tcp, 7881/tcp, 50000-50100/udp   LiveKit signalling/RTC
+#   3478/tcp, 3478/udp, 5349/tcp          TURN/STUN (TURN_TLS for 5349)
+#   49200-49250/udp                       coturn relay
+#   8080/tcp                              agent health/metrics + drain control
+#   6789/tcp                              LiveKit Prometheus metrics (optional)
+#
+# Secrets: `.env` is read by Compose for interpolation AND injected through
+# env_file; it is gitignored. Nothing secret is baked into the image. The node
+# key is persisted in the `node-state` volume with mode 0600 — do not delete it
+# on every restart or the node has to re-enroll with a fresh token.
+#
+# `docker compose config -q` is the static check used in CI; it does not build
+# or start anything. See agil/core/docs/node-image.md for the full runbook.
+
+name: agil-node
+
+services:
+  node:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Keep in sync with the LiveKit tag in agil/core/deploy/livekit.
+        LIVEKIT_VERSION: ${LIVEKIT_VERSION:-v1.13.11}
+    image: ${AGIL_NODE_IMAGE:-agil-node-all-in-one:0.1.0}
+    restart: unless-stopped
+    # tini (from Docker) as PID 1 forwards SIGTERM to the agent and reaps media
+    # children if the agent is busy; the agent itself also handles SIGTERM.
+    init: true
+    network_mode: host
+    # `required: false` keeps `docker compose config` working on a clean
+    # checkout; starting without .env fails later with the agent's config error.
+    # Do NOT add a canonical `environment:` override here: it would shadow the
+    # `AGIL_NODE_*` aliases accepted by the agent (compose `environment:` wins
+    # over `env_file:`). The agent supplies the HTTP port default; state/runtime
+    # defaults come from the image ENV. Compose inherits the image healthcheck.
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      # Persist the node key across restarts. Named volume, not a bind mount, so
+      # it inherits the image's node:node ownership. If you override
+      # NODE_STATE_DIR/AGIL_NODE_STATE_DIR in .env, change this target too.
+      - node-state:/var/lib/agil-node
+      # OPTIONAL TURN/TLS certificate pair (TURN_TLS=1). Uncomment, put the PEM
+      # files in ${TURN_CERT_HOST_DIR}, and set TURN_CERT=/certs/fullchain.pem +
+      # TURN_PKEY=/certs/privkey.pem in .env. Read-only; the agent only reads them.
+      # - type: bind
+      #   source: ${TURN_CERT_HOST_DIR:-/etc/letsencrypt/live/turn.example.com}
+      #   target: /certs
+      #   read_only: true
+    # Read-only root filesystem: only the state volume, the runtime tmpfs and
+    # /tmp are writable. The agent writes turnserver.conf (0600) into /run/agil.
+    read_only: true
+    tmpfs:
+      - /run/agil:mode=0700,uid=1000,gid=1000
+      - /tmp:mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    # The agent reports `offline` to Core and stops both media children.
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+volumes:
+  node-state:

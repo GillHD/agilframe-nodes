@@ -1,0 +1,23 @@
+services:
+  stt:
+    image: ${STT_IMAGE:-agil/node-stt:0.1.0}
+    build:
+      context: ../..
+      dockerfile: nodes/stt/Dockerfile
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      AGIL_STT_TOKEN: ${AGIL_STT_TOKEN:?Set the worker credential}
+      AGIL_STT_PREVIOUS_TOKEN: ${AGIL_STT_PREVIOUS_TOKEN:-}
+      STT_MODEL_PATH: /models/whisper
+    volumes:
+      - type: bind
+        source: ${STT_MODEL_DIR:?Set the preloaded model directory}
+        target: /models/whisper
+        read_only: true
+        bind:
+          create_host_path: false
+    ports:
+      - "${STT_LISTEN_IP:-127.0.0.1}:8090:8090"

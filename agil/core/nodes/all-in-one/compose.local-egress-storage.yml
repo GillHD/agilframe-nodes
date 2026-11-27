@@ -1,0 +1,13 @@
+# Optional file-based worker configuration. Load after compose.local-egress.yml.
+services:
+  egress:
+    environment:
+      EGRESS_CONFIG_BODY: ""
+      EGRESS_CONFIG_FILE: /etc/agil-egress/egress.yaml
+    volumes:
+      - type: bind
+        source: "${AGIL_NODE_EGRESS_CONFIG_FILE:?set AGIL_NODE_EGRESS_CONFIG_FILE}"
+        target: /etc/agil-egress/egress.yaml
+        read_only: true
+        bind:
+          create_host_path: false

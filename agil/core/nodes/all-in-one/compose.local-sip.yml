@@ -1,0 +1,43 @@
+# Optional LiveKit SIP worker on the same Linux host as the SFU and Redis.
+services:
+  sip:
+    labels:
+      agil.module: sip
+      agil.node: "${NODE_ID:-}"
+    image: livekit/sip:v1.24${AGIL_SIP_IMAGE_DIGEST:+@sha256:$AGIL_SIP_IMAGE_DIGEST}
+    command: ["--config", "/etc/agil-sip/sip.yaml"]
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      node:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SSL_CERT_FILE: "${AGIL_NODE_SIP_CA_FILE:-/etc/ssl/certs/ca-certificates.crt}"
+    volumes:
+      - type: bind
+        source: "${AGIL_NODE_SIP_CONFIG_DIR:?set the directory containing sip.yaml}"
+        target: /etc/agil-sip
+        read_only: true
+        bind:
+          create_host_path: false
+    healthcheck:
+      test:
+        - CMD
+        - /bin/bash
+        - -ec
+        - |
+          exec 3<>/dev/tcp/127.0.0.1/${AGIL_NODE_SIP_HEALTH_PORT:-28083}
+          printf 'GET / HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3
+          read -r status <&3
+          [[ "$$status" == HTTP/*" 200 "* ]]
+      interval: 10s
+      timeout: 4s
+      retries: 6
+    stop_grace_period: 45s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

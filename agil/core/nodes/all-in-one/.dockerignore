@@ -1,0 +1,15 @@
+# The build context is this directory; only the agent sources are needed.
+# Keeping tests/docs/compose out of the context makes the image reproducible
+# and prevents a stray .env from reaching the builder.
+.git
+.env
+.env.*
+release-image.env
+.release-image.lock
+!.env.example
+test/
+systemd/
+*.md
+docker-compose*.yml
+.dockerignore
+Dockerfile

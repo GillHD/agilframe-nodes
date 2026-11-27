@@ -1,0 +1,8 @@
+[Unit]
+Description=Apply an approved AgilFrame node image within its maintenance window (%i)
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh /usr/local/libexec/agil-node/rollout-image.sh %i --apply-approved
+TimeoutStartSec=20min

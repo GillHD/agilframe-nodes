@@ -1,0 +1,3 @@
+**
+!packages/ai/scripts/local/faster_whisper_worker.py
+!nodes/stt/worker.py

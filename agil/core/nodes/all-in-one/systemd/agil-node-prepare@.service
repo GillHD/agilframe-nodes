@@ -1,0 +1,8 @@
+[Unit]
+Description=Stage the approved AgilFrame node image (%i)
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh /usr/local/libexec/agil-node/rollout-image.sh %i --prepare-approved
+TimeoutStartSec=30min

@@ -1,0 +1,22 @@
+[Unit]
+Description=AgilFrame media node (%i)
+Wants=network-online.target
+Requires=docker.service
+After=network-online.target docker.service
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/etc/agil-node/%i
+EnvironmentFile=-/etc/agil-node/%i/release-image.env
+UnsetEnvironment=DOCKER_HOST DOCKER_CONTEXT
+ExecStartPre=/usr/bin/docker --host unix:///var/run/docker.sock compose --env-file .env --project-name %i config --quiet
+ExecStart=/usr/bin/docker --host unix:///var/run/docker.sock compose --env-file .env --project-name %i up --detach --no-build --pull never --wait --wait-timeout 150
+# Also stop partially started containers when a startup check fails.
+ExecStopPost=/usr/bin/docker --host unix:///var/run/docker.sock compose --env-file .env --project-name %i stop
+TimeoutStartSec=180s
+TimeoutStopSec=120s
+
+[Install]
+WantedBy=multi-user.target

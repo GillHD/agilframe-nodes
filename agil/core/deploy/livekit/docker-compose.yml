@@ -1,0 +1,126 @@
+# AgilFrame — standalone LiveKit SFU scaffold (S0 spike / lab).
+#
+# This file is intentionally separate from the app compose in the repo root:
+# it can be started, tested and destroyed without touching the running app.
+#
+#   cp .env.example .env && edit keys
+#   docker compose up -d                 # livekit + redis only
+#   docker compose --profile egress up -d egress   # optional recording worker
+#   docker compose down -v               # stop + drop the redis volume
+#
+# Network model: bridge network + explicit port mapping. LiveKit recommends
+# host networking for busy production SFUs; see README.md ("Host networking")
+# for the trade-off and the commented host-network variant.
+#
+# Secrets are injected from the environment only (`LIVEKIT_API_KEY/SECRET`).
+# Never commit a filled `.env`.
+
+name: agil-sfu
+
+services:
+  # LiveKit's room directory / multi-node bus. Not published publicly; the
+  # loopback mapping exists only so host-networked egress can reach it.
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--save", "900", "1"]
+    ports:
+      - "127.0.0.1:${SFU_REDIS_PORT:-6380}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  livekit:
+    # PINNED. Check https://hub.docker.com/r/livekit/livekit-server/tags before
+    # bumping; keep livekit-server/egress/SDK versions on a documented cadence.
+    image: livekit/livekit-server:v1.13.11
+    restart: unless-stopped
+    command: ["--config", "/etc/livekit.yaml"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      # Format: "<api-key>: <api-secret>". Never put keys in livekit.yaml.
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:?set LIVEKIT_API_KEY (see .env.example)}: ${LIVEKIT_API_SECRET:?set LIVEKIT_API_SECRET (see .env.example)}"
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    ports:
+      # signaling (HTTP + WebSocket)
+      - "${SFU_HTTP_PORT:-7880}:7880/tcp"
+      # RTC over TCP fallback for networks that block UDP
+      - "${SFU_RTC_TCP_PORT:-7881}:7881/tcp"
+      # RTC media over UDP (test range; production usually uses 50000-60000)
+      - "50000-50100:50000-50100/udp"
+      # Optional single-port UDP mux. Uncomment together with rtc.udp_port in
+      # livekit.yaml when the firewall only allows one UDP port. It replaces
+      # the 50000-50100 range for media, so keep the range for the spike.
+      # - "7882:7882/udp"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+
+  # Second node for multi-node routing/HA validation. Same Redis and API keys;
+  # separate signaling/RTC ports. A room is hosted by one node, signaling may
+  # arrive at either node and is bridged through Redis.
+  livekit2:
+    image: livekit/livekit-server:v1.13.11
+    restart: unless-stopped
+    command: ["--config", "/etc/livekit-node2.yaml"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:?set LIVEKIT_API_KEY (see .env.example)}: ${LIVEKIT_API_SECRET:?set LIVEKIT_API_SECRET (see .env.example)}"
+    volumes:
+      - ./livekit-node2.yaml:/etc/livekit-node2.yaml:ro
+    ports:
+      - "127.0.0.1:${SFU2_HTTP_PORT:-7890}:7890/tcp"
+      - "127.0.0.1:${SFU2_RTC_TCP_PORT:-7891}:7891/tcp"
+      - "50200-50300:50200-50300/udp"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+
+  # Optional: server-side recording / RTMP / HLS. Needs a bigger host
+  # (Chrome + GStreamer; budget >= 4 GB RAM per concurrent recording) and is
+  # NOT started by plain `docker compose up -d` because of the profile.
+  #
+  # Host networking is required by the egress container. It reaches LiveKit
+  # and Redis through the loopback ports published above.
+  egress:
+    image: livekit/egress:v1.15.0
+    profiles: ["egress"]
+    restart: unless-stopped
+    network_mode: host
+    shm_size: "1gb"
+    depends_on:
+      livekit:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    environment:
+      EGRESS_CONFIG_BODY: |
+        api_key: ${LIVEKIT_API_KEY:?set LIVEKIT_API_KEY}
+        api_secret: ${LIVEKIT_API_SECRET:?set LIVEKIT_API_SECRET}
+        ws_url: ws://127.0.0.1:${SFU_HTTP_PORT:-7880}
+        redis:
+          address: 127.0.0.1:${SFU_REDIS_PORT:-6380}
+        # Recording destination. Egress nests storage under `storage.s3`.
+        # Keep real credentials in .env, not here:
+        # storage:
+        #   s3:
+        #     access_key: <EGRESS_S3_ACCESS_KEY>
+        #     secret: <EGRESS_S3_SECRET_KEY>
+        #     region: <EGRESS_S3_REGION>
+        #     bucket: <EGRESS_S3_BUCKET>
+        #     endpoint: <EGRESS_S3_ENDPOINT>
+        #     force_path_style: true
+
+volumes:
+  redis-data:

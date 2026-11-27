@@ -1,0 +1,38 @@
+# Optional HTTPS and WSS endpoint for browser clients on a Linux SFU host.
+services:
+  edge:
+    image: caddy:2.11.2-alpine${AGIL_EDGE_IMAGE_DIGEST:+@sha256:$AGIL_EDGE_IMAGE_DIGEST}
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      node:
+        condition: service_healthy
+    environment:
+      AGIL_SFU_TLS_HOST: "${AGIL_SFU_TLS_HOST:?set the SFU certificate hostname}"
+      AGIL_SFU_TLS_PORT: "${AGIL_SFU_TLS_PORT:-443}"
+      AGIL_SFU_TLS_BIND: "${AGIL_SFU_TLS_BIND:-0.0.0.0}"
+      SFU_PORT: "${SFU_PORT:-7880}"
+    volumes:
+      - ./Caddyfile.sfu:/etc/caddy/Caddyfile:ro
+      - type: bind
+        source: "${AGIL_SFU_TLS_CERT_DIR:?set the directory containing fullchain.pem and privkey.pem}"
+        target: /certs
+        read_only: true
+        bind:
+          create_host_path: false
+    read_only: true
+    tmpfs:
+      - /data
+      - /config
+      - /run/caddy:mode=0700
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

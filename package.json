@@ -1,0 +1,9 @@
+{
+  "name": "agilframe-nodes",
+  "private": true,
+  "type": "module",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "scripts": {
+    "test": "node --test \"agil/core/nodes/all-in-one/test/*.test.mjs\" && node --test \"agil/infra/node-agent/test/*.test.mjs\" && node --test agil/edge/test/*.test.mjs"
+  }
+}
