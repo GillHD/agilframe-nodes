@@ -1,6 +1,6 @@
 # AgilFrame Nodes
 
-Образ медианоды, STT, Node Agent и Edge.
+Образ медианоды, STT и Node Agent.
 
 [AgilFrame](https://github.com/users/GillHD/projects/1) · [Core и документация](https://github.com/GillHD/agilframe-core)
 
@@ -10,8 +10,9 @@
 
 - [Медианода и Compose](agil/core/nodes/all-in-one/) с LiveKit SFU и coturn.
 - [Воркер STT](agil/core/nodes/stt/).
-- [Node Agent](agil/infra/node-agent/) и [Edge-агент](agil/edge/).
+- [Node Agent](agil/infra/node-agent/).
+- Контроллер для публикации с внешних устройств доступен в [AgilFrame Edge](https://github.com/GillHD/agilframe-edge).
 
-В корне запустите `npm test`. Тесты агентов работают без установки npm-зависимостей. В тестах Edge нужен ffmpeg в PATH. Для развёртывания в каталоге `agil/core/nodes/all-in-one` скопируйте `.env.example` в `.env` и задайте адрес Core, токен регистрации и сеть по [руководству](agil/core/docs/node-image.md). Проверьте конфигурацию командой `docker compose config --quiet`, затем запустите ноду по инструкции.
+В корне запустите `npm test`. Тесты агентов работают без установки npm-зависимостей. Для развёртывания в каталоге `agil/core/nodes/all-in-one` скопируйте `.env.example` в `.env` и задайте адрес Core, токен регистрации и сеть по руководству. Проверьте конфигурацию командой `docker compose config --quiet`, затем запустите ноду. [Руководство](agil/core/docs/node-image.md)
 
 Нода регистрируется в Core и получает команды. WebRTC идёт к назначенной SFU или через TURN, когда выбран релейный маршрут.
