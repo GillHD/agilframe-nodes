@@ -1,6 +1,6 @@
-# AGIL node agent (reference)
+# AgilFrame Node Agent reference
 
-A dependency-free Node.js agent that registers a node with AGIL Core and keeps
+A dependency-free Node.js agent that registers a node with AgilFrame Core and keeps
 its record alive. It is **optional**: the default quickstart and `agil-node`
 chart run the first-party CLI (`agil/core/scripts/agil-cli.mjs`) inside the
 standard `agil-calls` image, with no extra image. Use this agent only when you

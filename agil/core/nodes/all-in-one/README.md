@@ -1,4 +1,4 @@
-# AgilFrame — all-in-one media node image
+# AgilFrame all-in-one media node
 
 One container that owns a node end-to-end: enrollment, heartbeat, health,
 metrics, drain, the media processes for the enabled features, and (optionally)
@@ -124,7 +124,7 @@ module implementation is the same file as the reference agent's
 (`agil/infra/node-agent/modules.mjs`, byte-identical); the full contract,
 labels, env file and failure semantics are documented in
 [`agil/infra/node-agent/README.md`](../../../infra/node-agent/README.md#docker-modules-heartbeat-modules--modulecommands)
-and [`agil/core/docs/api/cluster.md` §10](../../docs/api/cluster.md).
+and the [Core cluster API guide](https://github.com/GillHD/agilframe-core/blob/main/agil/core/docs/api/cluster.md).
 
 Mounting the Docker socket gives the agent root-equivalent control of the host.
 Do it only on nodes that should run AGIL add-ons; the base image stays read-only
