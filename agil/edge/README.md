@@ -1,4 +1,4 @@
-# AGIL Edge
+# AgilFrame Edge
 
 ## Публикация MP4 в SFU-комнату
 
@@ -11,7 +11,7 @@
 Нужны Node.js 20 или новее, FFmpeg и FFprobe. На Core включите Redis
 для Flows и настройте управляемый RTMP Ingress. Заранее создайте
 SFU-комнату в организации, которой принадлежит ключ управления.
-[Настройка Core и LiveKit Ingress](../core/docs/flows.md#managed-rtmp-push)
+[Настройка Core и LiveKit Ingress](https://github.com/GillHD/agilframe-core/blob/main/agil/core/docs/flows.md#managed-rtmp-push)
 
 Запускайте контроллер от выделенной учётной записи на доверенном узле
 оператора. Он использует существующий административный ключ организации.
@@ -63,8 +63,9 @@ FFprobe читает опубликованные H.264 и AAC. После ос�
 подходящим именем, а также отказ при доверенном сертификате для другого
 имени.
 
-Для сквозной проверки на изолированном Linux-стенде с Chromium и
-локальным Docker соберите Core-зависимости и виджет. Загрузите образы
+Для сквозной проверки используйте [репозиторий Core](https://github.com/GillHD/agilframe-core),
+где есть сервер, виджет и тот же сценарий. На изолированном Linux-стенде
+с Chromium и локальным Docker соберите зависимости Core и виджет. Загрузите образы
 `redis:7-alpine`, `livekit/livekit-server:v1.13.11` и
 `livekit/ingress:v1.6.0`. Сквозной сценарий использует порты 39541–39547.
 
