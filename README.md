@@ -12,6 +12,6 @@
 - [Воркер STT](agil/core/nodes/stt/).
 - [Node Agent](agil/infra/node-agent/) и [Edge-агент](agil/edge/).
 
-В корне запустите `npm test`. Тесты агентов работают без установки npm-зависимостей. Для развёртывания в каталоге `agil/core/nodes/all-in-one` скопируйте `.env.example` в `.env` и задайте адрес Core, токен регистрации и сеть по [руководству](agil/core/docs/node-image.md). Проверьте конфигурацию командой `docker compose config --quiet`, затем запустите ноду по инструкции.
+В корне запустите `npm test`. Тесты агентов работают без установки npm-зависимостей. В тестах Edge нужен ffmpeg в PATH. Для развёртывания в каталоге `agil/core/nodes/all-in-one` скопируйте `.env.example` в `.env` и задайте адрес Core, токен регистрации и сеть по [руководству](agil/core/docs/node-image.md). Проверьте конфигурацию командой `docker compose config --quiet`, затем запустите ноду по инструкции.
 
 Нода регистрируется в Core и получает команды. WebRTC идёт к назначенной SFU или через TURN, когда выбран релейный маршрут.
